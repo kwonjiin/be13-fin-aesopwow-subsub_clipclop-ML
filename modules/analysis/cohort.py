@@ -419,7 +419,8 @@ def analysis_cohort_FavGenre(info_db_no, target_table_user, target_table_sub, ta
     metadata = MetaData()
 
     # 날짜 처리
-    start_date = datetime.strptime(target_date, "%Y-%m-%d")
+    # start_date = datetime.strptime(target_date, "%Y-%m-%d")
+    start_date = target_date
     target_year = start_date.year
     target_month = start_date.month
 
@@ -558,7 +559,8 @@ def analysis_cohort_LastLogin(info_db_no, target_table_user, target_table_sub, t
     metadata = MetaData()
 
     # 날짜 처리
-    start_date = datetime.strptime(target_date, "%Y-%m-%d")
+    # start_date = datetime.strptime(target_date, "%Y-%m-%d")
+    start_date = target_date
     target_year = start_date.year
     target_month = start_date.month
 

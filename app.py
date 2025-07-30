@@ -1,8 +1,8 @@
 from flask import Flask
 from flask import Blueprint
 from flask_restx import Api
-from resources.config.internal_local_db_config import Config
-# from resources.config.internal_db_config import Config
+# from resources.config.internal_local_db_config import  Config
+from resources.config.internal_db_config import Config
 from models import db
 
 # Blueprints

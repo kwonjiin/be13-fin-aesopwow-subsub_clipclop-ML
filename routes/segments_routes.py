@@ -42,7 +42,7 @@ def segment_subscription():
     if 'user_no' in df_sub.columns:
         df_sub.rename(columns={'user_no': 'user_id'}, inplace=True)
 
-    user_columns = ['user_id', 'name', 'age', 'country', 'watch_time_hour', 'favorite_genre', 'last_login', 'gender']
+    user_columns = ['user_id', 'name', 'age', 'country', 'watch_time_hours', 'favorite_genre', 'last_login', 'gender']
     sub_columns = ['user_id', 'subscription_type', 'started_at']  # started_at을 날짜 기준으로 사용
 
     missing_user = [col for col in user_columns if col not in df_user.columns]
@@ -124,19 +124,19 @@ def segment_watchtime():
     except Exception as e:
         return jsonify({"success": False, "message": f"데이터 로드 중 오류: {str(e)}"}), 500
 
-    if 'user_no' in df_user.columns:
-        df_user.rename(columns={'user_no': 'user_id'}, inplace=True)
-    if 'user_no' in df_sub.columns:
-        df_sub.rename(columns={'user_no': 'user_id'}, inplace=True)
+    # if 'user_no' in df_user.columns:
+    #     df_user.rename(columns={'user_no': 'user_id'}, inplace=True)
+    # if 'user_no' in df_sub.columns:
+    #     df_sub.rename(columns={'user_no': 'user_id'}, inplace=True)
 
-    user_columns = ['user_id', 'name', 'age', 'country', 'watch_time_hour', 'favorite_genre', 'last_login', 'gender']
+    user_columns = ['user_id', 'name', 'age', 'country', 'watch_time_hours', 'favorite_genre', 'last_login', 'gender']
     sub_columns = ['user_id', 'subscription_type', 'started_at']  # started_at을 날짜 기준으로 사용
 
     missing_user = [col for col in user_columns if col not in df_user.columns]
     missing_sub = [col for col in sub_columns if col not in df_sub.columns]
-    if missing_user:
+    if len(missing_user) > 0:
         return jsonify({"success": False, "message": f"df_user에 다음 컬럼이 없습니다: {missing_user}"}), 500
-    if missing_sub:
+    if len(missing_sub) > 0:
         return jsonify({"success": False, "message": f"df_sub에 다음 컬럼이 없습니다: {missing_sub}"}), 500
 
     # 유저별 최신 구독 이력만 남기기 (started_at 기준)
@@ -149,8 +149,8 @@ def segment_watchtime():
     df = pd.merge(df_user, df_sub_latest, on='user_id', how='left')
 
     # 컬럼명 확인 및 방어코드 추가
-    if 'watch_time_hour' not in df.columns:
-        return jsonify({"success": False, "message": "'watch_time_hour' 컬럼이 데이터에 없습니다."}), 500
+    if 'watch_time_hours' not in df.columns:
+        return jsonify({"success": False, "message": "'watch_time_hours' 컬럼이 데이터에 없습니다."}), 500
 
     def get_watch_time_segment(hour):
         if pd.isna(hour):
@@ -162,7 +162,7 @@ def segment_watchtime():
         else:
             return 'Power User'
 
-    df['segment'] = df['watch_time_hour'].apply(get_watch_time_segment)
+    df['segment'] = df['watch_time_hours'].apply(get_watch_time_segment)
 
     # 로컬 파일 저장
     save_dir = "csv_exports"
@@ -212,12 +212,12 @@ def segment_lastlogin():
         return jsonify({"success": False, "message": f"데이터 로드 중 오류: {str(e)}"}), 500
 
     # user_no 컬럼명 통일
-    if 'user_no' in df_user.columns:
+    if 'user_id' in df_user.columns:
         df_user.rename(columns={'user_no': 'user_id'}, inplace=True)
     if 'user_no' in df_sub.columns:
         df_sub.rename(columns={'user_no': 'user_id'}, inplace=True)
 
-    user_columns = ['user_id', 'name', 'age', 'country', 'watch_time_hour', 'favorite_genre', 'last_login', 'gender']
+    user_columns = ['user_id', 'name', 'age', 'country', 'watch_time_hours', 'favorite_genre', 'last_login', 'gender']
     sub_columns = ['user_id', 'subscription_type', 'started_at']  # started_at을 날짜 기준으로 사용
 
     missing_user = [col for col in user_columns if col not in df_user.columns]
@@ -250,9 +250,9 @@ def segment_lastlogin():
         else:
             last_login_dt = last_login
         diff = (now - last_login_dt).days
-        if diff <= 7:
+        if diff <= 30:
             return 'Frequent User'
-        elif diff <= 30:
+        elif diff <= 60:
             return 'Dormant User'
         else:
             return 'Forgotten User'
@@ -314,7 +314,7 @@ def segment_genre():
         df_sub.rename(columns={'user_no': 'user_id'}, inplace=True)
 
     # 필요한 컬럼 정의
-    user_columns = ['user_id', 'name', 'age', 'country', 'watch_time_hour', 'favorite_genre', 'last_login', 'gender']
+    user_columns = ['user_id', 'name', 'age', 'country', 'watch_time_hours', 'favorite_genre', 'last_login', 'gender']
     sub_columns = ['user_id', 'subscription_type', 'started_at']  # started_at을 날짜 기준으로 사용
 
     missing_user = [col for col in user_columns if col not in df_user.columns]
@@ -342,9 +342,10 @@ def segment_genre():
     final_columns = ['segment'] + user_columns + ['subscription_type']
 
     # CSV 로컬 저장
-    os.makedirs("csv_exports", exist_ok=True)
+    save_dir = "csv_exports"
     filename = f"{info_db_no}_segment_{target_column}_{now}.csv"
-    file_path = os.path.join("csv_exports", filename)
+    os.makedirs(save_dir, exist_ok=True)
+    file_path = os.path.join(save_dir, filename)
 
     try:
         df.to_csv(file_path, columns=final_columns, index=False, encoding="utf-8")

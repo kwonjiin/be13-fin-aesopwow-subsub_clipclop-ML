@@ -1,29 +1,54 @@
 from models.insight import Insight
+import re
 
 def extract_insight_and_recommendation(llm_response: str) -> Insight:
-    """
-    LLM의 자연어 응답에서 인사이트 요약과 행동 추천을 분리/정제합니다.
-    (실제 서비스에서는 LLM 프롬프트를 설계해 json 등으로 받는 것도 추천)
-    """
     if not llm_response or not llm_response.strip():
-        return Insight(summary="", recommendations=[])
+        return Insight(summary="", prediction="", recommendations=[])
 
-    lines = llm_response.split('\n')
+    lines = llm_response.splitlines()
+    section = None
     summary = ""
+    prediction = ""
     recommendations = []
+    current_rec = ""
+
     for line in lines:
         line = line.strip()
         if not line:
             continue
 
         if line.startswith("요약:"):
+            section = "summary"
             summary = line.replace("요약:", "").strip()
-        elif line.startswith("추천:"):
-            recs = line.replace("추천:", "").strip().split(';')
-            recommendations = [r.strip() for r in recs if r.strip()]
-        elif len(line) > 0 and line[0].isdigit() and '.' in line:
-            dot_index = line.find('.')
-            if dot_index != -1 and dot_index < len(line) - 1:
-                recommendations.append(line[dot_index + 1:].strip())
 
-    return Insight(summary=summary, recommendations=recommendations)
+        elif line.startswith("예측:"):
+            section = "prediction"
+            prediction = line.replace("예측:", "").strip()
+
+        elif line.startswith("인사이트:"):
+            section = "insight"
+
+        elif line.startswith("행동 추천:"):
+            section = "recommendation"
+
+        elif section == "insight" and re.match(r'^\d+\.', line):
+            # 인사이트도 추천에 포함
+            insight_text = line[line.find('.') + 1:].strip()
+            recommendations.append(f"(인사이트) {insight_text}")
+
+        elif section == "recommendation":
+            if re.match(r'^\d+\.\s+\*\*(.*?)\*\*:', line):  # 예: 1. **데이터 검증 및 정제**:
+                if current_rec:
+                    recommendations.append(current_rec.strip())
+                current_rec = line  # 새 제목 시작
+            elif line.startswith('-'):
+                current_rec += f"\n{line}"
+
+    if current_rec:
+        recommendations.append(current_rec.strip())
+
+    return Insight(
+        summary=summary,
+        prediction=prediction,
+        recommendations=recommendations
+    )
